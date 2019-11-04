@@ -7,17 +7,24 @@ static jbyte *Src_i420_data;
 static jbyte *Src_i420_data_scale;
 static jbyte *Src_i420_data_rotate;
 
-JNIEXPORT void JNI_OnUnload(JavaVM *jvm, void *reserved) {
-    //进行释放
-    free(Src_i420_data);
-    free(Src_i420_data_scale);
-    free(Src_i420_data_rotate);
-}
+//JNIEXPORT void JNI_OnUnload(JavaVM *jvm, void *reserved) {
+//    //进行释放
+//    free(Src_i420_data);
+//    free(Src_i420_data_scale);
+//    free(Src_i420_data_rotate);
+//}
 
 void init(jint width, jint height, jint dst_width, jint dst_height) {
     Src_i420_data = (jbyte *) malloc(sizeof(jbyte) * width * height * 3 / 2);
     Src_i420_data_scale = (jbyte *) malloc(sizeof(jbyte) * dst_width * dst_height * 3 / 2);
     Src_i420_data_rotate = (jbyte *) malloc(sizeof(jbyte) * dst_width * dst_height * 3 / 2);
+}
+
+void free_memory(){
+    //进行释放
+    free(Src_i420_data);
+    free(Src_i420_data_scale);
+    free(Src_i420_data_rotate);
 }
 
 void scaleI420(jbyte *src_i420_data, jint width, jint height, jbyte *dst_i420_data, jint dst_width,
@@ -113,6 +120,30 @@ void nv21ToI420(jbyte *src_nv21_data, jint width, jint height, jbyte *src_i420_d
                        width, height);
 }
 
+
+void yuvI420ToNV12(jbyte *i420Src,jbyte *nv12Src,
+                   jint width, jint height) {
+
+    jint src_y_size = width * height;
+    jint src_u_size = (width >> 1) * (height >> 1);
+
+    jbyte *src_i420_y_data = i420Src;
+    jbyte *src_i420_u_data = i420Src + src_y_size;
+    jbyte *src_i420_v_data = i420Src + src_y_size + src_u_size;
+
+    jbyte *src_nv12_y_data = nv12Src;
+    jbyte *src_nv12_uv_data = nv12Src + src_y_size;
+
+
+    libyuv::I420ToNV12(
+            (const uint8 *) src_i420_y_data, width,
+            (const uint8 *) src_i420_u_data, width >> 1,
+            (const uint8 *) src_i420_v_data, width >> 1,
+            (uint8 *) src_nv12_y_data, width,
+            (uint8 *) src_nv12_uv_data, width,
+            width, height);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_libyuv_util_YuvUtil_compressYUV(JNIEnv *env, jclass type,
@@ -138,7 +169,9 @@ Java_com_libyuv_util_YuvUtil_compressYUV(JNIEnv *env, jclass type,
     } else {
         rotateI420(Src_i420_data_scale, dst_width, dst_height, Dst_data, degree);
     }
+    env->ReleaseByteArrayElements(src_, Src_data, 0);
     env->ReleaseByteArrayElements(dst_, Dst_data, 0);
+    free_memory();
 }
 
 extern "C"
@@ -177,6 +210,7 @@ Java_com_libyuv_util_YuvUtil_cropYUV(JNIEnv *env, jclass type, jbyteArray src_, 
                           dst_width, dst_height,
                           libyuv::kRotate0, libyuv::FOURCC_I420);
 
+    env->ReleaseByteArrayElements(src_, src_i420_data, 0);
     env->ReleaseByteArrayElements(dst_, dst_i420_data, 0);
 }
 
@@ -207,8 +241,127 @@ Java_com_libyuv_util_YuvUtil_yuvI420ToNV21(JNIEnv *env, jclass type, jbyteArray 
             (uint8 *) src_nv21_y_data, width,
             (uint8 *) src_nv21_vu_data, width,
             width, height);
+
+    env->ReleaseByteArrayElements(i420Src, src_i420_data, 0);
+    env->ReleaseByteArrayElements(nv21Src, src_nv21_data, 0);
 }
 
 
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_libyuv_util_YuvUtil_yuvI420ToNV12(JNIEnv *env, jclass type, jbyteArray i420Src,
+                                           jbyteArray nv12Src,
+                                           jint width, jint height) {
+
+    jbyte *src_i420_data = env->GetByteArrayElements(i420Src, NULL);
+    jbyte *src_nv12_data = env->GetByteArrayElements(nv12Src, NULL);
+
+    jint src_y_size = width * height;
+    jint src_u_size = (width >> 1) * (height >> 1);
+
+    jbyte *src_i420_y_data = src_i420_data;
+    jbyte *src_i420_u_data = src_i420_data + src_y_size;
+    jbyte *src_i420_v_data = src_i420_data + src_y_size + src_u_size;
+
+    jbyte *src_nv12_y_data = src_nv12_data;
+    jbyte *src_nv12_uv_data = src_nv12_data + src_y_size;
+
+
+    libyuv::I420ToNV12(
+            (const uint8 *) src_i420_y_data, width,
+            (const uint8 *) src_i420_u_data, width >> 1,
+            (const uint8 *) src_i420_v_data, width >> 1,
+            (uint8 *) src_nv12_y_data, width,
+            (uint8 *) src_nv12_uv_data, width,
+            width, height);
+
+    env->ReleaseByteArrayElements(i420Src, src_i420_data, 0);
+    env->ReleaseByteArrayElements(nv12Src, src_nv12_data, 0);
+}
+
+
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_libyuv_util_YuvUtil_NV21ToNV12(JNIEnv *env, jclass type, jbyteArray NV21Src,jbyteArray NV12Src,
+                                        jint width, jint height, jint len) {
+
+
+
+
+    jbyte *Src_data = env->GetByteArrayElements(NV21Src, NULL);
+    jbyte *Dst_data = env->GetByteArrayElements(NV12Src, NULL);
+    //nv21转化为i420
+    nv21ToI420(Src_data, width, height, Src_i420_data);
+
+
+    //jbyte *src_i420_data = env->GetByteArrayElements(i420Src, NULL);
+    //jbyte *src_nv21_data = env->GetByteArrayElements(nv21Src, NULL);
+
+    //i420转化为nv12
+    yuvI420ToNV12(Src_i420_data,Dst_data,width,height);
+
+    env->ReleaseByteArrayElements(NV21Src, Src_data, 0);
+    env->ReleaseByteArrayElements(NV12Src, Dst_data, 0);
+
+}
+
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_libyuv_util_YuvUtil_NV21ToyuvI420(JNIEnv *env, jclass type, jbyteArray nv12Src,
+                                           jbyteArray i420Src,
+                                           jint width, jint height) {
+
+    jbyte *src_i420_data = env->GetByteArrayElements(i420Src, NULL);
+    jbyte *src_nv12_data = env->GetByteArrayElements(nv12Src, NULL);
+
+    jint src_y_size = width * height;
+    jint src_u_size = (width >> 1) * (height >> 1);
+
+    jbyte *src_i420_y_data = src_i420_data;
+    jbyte *src_i420_u_data = src_i420_data + src_y_size;
+    jbyte *src_i420_v_data = src_i420_data + src_y_size + src_u_size;
+
+    jbyte *src_nv12_y_data = src_nv12_data;
+    jbyte *src_nv12_uv_data = src_nv12_data + src_y_size;
+
+
+//    libyuv::NV21ToI420(
+//            (const uint8 *) src_i420_y_data, width,
+//            (const uint8 *) src_i420_u_data, width >> 1,
+//            (const uint8 *) src_i420_v_data, width >> 1,
+//            (uint8 *) src_nv12_y_data, width,
+//            (uint8 *) src_nv12_uv_data, width,
+//            width, height);
+
+
+    libyuv::NV21ToI420(
+            (const uint8 *) src_nv12_y_data, width,
+            (const uint8 *) src_nv12_uv_data, width,
+            (uint8 *) src_i420_y_data, width,
+            (uint8 *) src_i420_u_data, width >> 1,
+            (uint8 *) src_i420_v_data, width >> 1,
+            width, height);
+
+
+    env->ReleaseByteArrayElements(i420Src, src_i420_data, 0);
+    env->ReleaseByteArrayElements(nv12Src, src_nv12_data, 0);
+
+
+//    LIBYUV_API
+//    int NV21ToI420(const uint8* src_y,
+//                   int src_stride_y,
+//                   const uint8* src_vu,
+//                   int src_stride_vu,
+//                   uint8* dst_y,
+//                   int dst_stride_y,
+//                   uint8* dst_u,
+//                   int dst_stride_u,
+//                   uint8* dst_v,
+//                   int dst_stride_v,
+//                   int width,
+//                   int height);
+}
 
 

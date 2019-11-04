@@ -49,4 +49,6 @@ public class YuvUtil {
      * @param width   输出的高
      **/
     public static native void yuvI420ToNV21(byte[] i420Src, byte[] nv21Src, int width, int height);
+
+    public static native void yuvI420ToNV12(byte[] i420Src, byte[] nv12Src, int width, int height);
 }
