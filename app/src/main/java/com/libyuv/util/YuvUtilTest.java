@@ -5,12 +5,10 @@ package com.libyuv.util;
  * 邮箱：mail@hezhilin.cc
  */
 
-public class YuvUtil {
+public class YuvUtilTest {
 
     static {
-        System.loadLibrary("yuvutil");
-//        System.loadLibrary("yuvutiltest");
-//        Class clz = YuvUtilTest.class;
+        System.loadLibrary("yuvutiltest");
     }
 
     /**

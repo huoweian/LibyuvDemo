@@ -8,6 +8,8 @@ package com.libyuv.util;
 public class YuvUtil {
 
     static {
+        //libyuv.so这个库可以不用添加
+        System.loadLibrary("yuvhello");
         System.loadLibrary("yuvutil");
 //        System.loadLibrary("yuvutiltest");
 //        Class clz = YuvUtilTest.class;
